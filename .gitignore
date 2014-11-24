@@ -18,3 +18,4 @@ pom.xml.versionsBackup
 build/
 **/build/
 *~
+**/PrivateStuff.java
