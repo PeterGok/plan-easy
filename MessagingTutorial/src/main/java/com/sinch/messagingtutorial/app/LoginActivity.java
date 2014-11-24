@@ -23,18 +23,15 @@ public class LoginActivity extends Activity {
     private String username;
     private String password;
     private Intent intent;
-    private Intent serviceIntent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        intent = new Intent(getApplicationContext(), ListUsersActivity.class);
-        serviceIntent = new Intent(getApplicationContext(), MessageService.class);
+        intent = new Intent(getApplicationContext(), ListConversationActivity.class);
 
         ParseUser currentUser = ParseUser.getCurrentUser();
         if (currentUser != null) {
-            startService(serviceIntent);
             startActivity(intent);
         }
 
@@ -54,7 +51,6 @@ public class LoginActivity extends Activity {
                 ParseUser.logInInBackground(username, password, new LogInCallback() {
                     public void done(ParseUser user, com.parse.ParseException e) {
                         if (user != null) {
-                            startService(serviceIntent);
                             startActivity(intent);
                         } else {
                             Toast.makeText(getApplicationContext(),
@@ -80,7 +76,6 @@ public class LoginActivity extends Activity {
                 user.signUpInBackground(new SignUpCallback() {
                     public void done(com.parse.ParseException e) {
                         if (e == null) {
-                            startService(serviceIntent);
                             startActivity(intent);
                         } else {
                             Toast.makeText(getApplicationContext(),

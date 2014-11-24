@@ -17,9 +17,6 @@ import com.sinch.android.rtc.messaging.MessageClientListener;
 import com.sinch.android.rtc.messaging.WritableMessage;
 
 public class MessageService extends Service implements SinchClientListener {
-
-    private static final String APP_KEY = "key";
-    private static final String APP_SECRET = "secret";
     private static final String ENVIRONMENT = "sandbox.sinch.com";
     private final MessageServiceInterface serviceInterface = new MessageServiceInterface();
     private SinchClient sinchClient = null;
@@ -43,8 +40,8 @@ public class MessageService extends Service implements SinchClientListener {
     }
 
     public void startSinchClient(String username) {
-        sinchClient = Sinch.getSinchClientBuilder().context(this).userId(username).applicationKey(APP_KEY)
-                .applicationSecret(APP_SECRET).environmentHost(ENVIRONMENT).build();
+        sinchClient = Sinch.getSinchClientBuilder().context(this).userId(username).applicationKey(PrivateStuff.APP_KEY)
+                .applicationSecret(PrivateStuff.APP_SECRET).environmentHost(ENVIRONMENT).build();
 
         sinchClient.addSinchClientListener(this);
 
@@ -115,8 +112,10 @@ public class MessageService extends Service implements SinchClientListener {
 
     @Override
     public void onDestroy() {
-        sinchClient.stopListeningOnActiveConnection();
-        sinchClient.terminate();
+        if (sinchClient != null) {
+            sinchClient.stopListeningOnActiveConnection();
+            sinchClient.terminate();
+        }
     }
 
     public class MessageServiceInterface extends Binder {

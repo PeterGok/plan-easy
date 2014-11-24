@@ -18,4 +18,5 @@ pom.xml.versionsBackup
 build/
 **/build/
 *~
-**/PrivateStuff.java
+MessagingTutorial/src/main/java/com/sinch/messagingtutorial/app/PrivateStuff.java
+

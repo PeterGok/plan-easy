@@ -23,6 +23,7 @@ import com.sinch.android.rtc.messaging.MessageDeliveryInfo;
 import com.sinch.android.rtc.messaging.MessageFailureInfo;
 import com.sinch.android.rtc.messaging.WritableMessage;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -35,6 +36,8 @@ public class MessagingActivity extends Activity {
     private MessageAdapter messageAdapter;
     private ListView messagesList;
     private String currentUserId;
+    private boolean isGroup;
+    private ArrayList<String> recipientIds;
     private ServiceConnection serviceConnection = new MyServiceConnection();
     private MessageClientListener messageClientListener = new MyMessageClientListener();
 
@@ -46,7 +49,19 @@ public class MessagingActivity extends Activity {
         bindService(new Intent(this, MessageService.class), serviceConnection, BIND_AUTO_CREATE);
 
         Intent intent = getIntent();
-        recipientId = intent.getStringExtra("RECIPIENT_ID");
+        recipientId = intent.getStringExtra(ListConversationActivity.RECIPIENT_IDS);
+        isGroup = intent.getBooleanExtra(ListConversationActivity.IS_GROUP, false);
+        recipientIds = new ArrayList<String>();
+        if (isGroup) {
+            String parseIds = recipientId;
+            while (!parseIds.isEmpty()) {
+                int index = recipientId.indexOf(ListConversationActivity.ID_SEPARATOR);
+                String nextId = recipientId.substring(0, index);
+                recipientIds.add(nextId);
+                parseIds = parseIds.substring(index + ListConversationActivity.ID_SEPARATOR.length());
+            }
+        }
+
         currentUserId = ParseUser.getCurrentUser().getObjectId();
 
         messagesList = (ListView) findViewById(R.id.listMessages);
