@@ -29,6 +29,8 @@ import java.util.List;
 
 public class MessagingActivity extends Activity {
 
+    public static final String ID_SEPARATOR = ";:;";
+
     private String recipientId;
     private EditText messageBodyField;
     private String messageBody;
@@ -55,10 +57,10 @@ public class MessagingActivity extends Activity {
         if (isGroup) {
             String parseIds = recipientId;
             while (!parseIds.isEmpty()) {
-                int index = recipientId.indexOf(ListConversationActivity.ID_SEPARATOR);
-                String nextId = recipientId.substring(0, index);
+                int index = parseIds.indexOf(ID_SEPARATOR);
+                String nextId = parseIds.substring(0, index);
                 recipientIds.add(nextId);
-                parseIds = parseIds.substring(index + ListConversationActivity.ID_SEPARATOR.length());
+                parseIds = parseIds.substring(index + ID_SEPARATOR.length());
             }
         }
 
@@ -81,10 +83,28 @@ public class MessagingActivity extends Activity {
 
     //get previous messages from parse & display
     private void populateMessageHistory() {
-        String[] userIds = {currentUserId, recipientId};
+        String[] userIds;
+        String recipientString = "";
+        if (isGroup) {
+            userIds = new String[recipientIds.size() + 1];
+            userIds[0] = currentUserId;
+            for (int index = 1; index < userIds.length; index++) {
+                userIds[index] = recipientIds.get(index - 1);
+            }
+            Arrays.sort(userIds);
+            for (String user : userIds) {
+                recipientString += user + ID_SEPARATOR;
+            }
+        } else {
+            userIds = new String[]{currentUserId, recipientId};
+        }
         ParseQuery<ParseObject> query = ParseQuery.getQuery("ParseMessage");
         query.whereContainedIn("senderId", Arrays.asList(userIds));
-        query.whereContainedIn("recipientId", Arrays.asList(userIds));
+        if (isGroup) {
+            query.whereEqualTo("recipientId", recipientString);
+        } else {
+            query.whereContainedIn("recipientId", Arrays.asList(userIds));
+        }
         query.orderByAscending("createdAt");
         query.findInBackground(new FindCallback<ParseObject>() {
             @Override
@@ -110,7 +130,12 @@ public class MessagingActivity extends Activity {
             return;
         }
 
-        messageService.sendMessage(recipientId, messageBody);
+        if (isGroup) {
+            messageService.sendMessage(recipientIds, messageBody);
+        } else {
+            messageService.sendMessage(recipientId, messageBody);
+        }
+
         messageBodyField.setText("");
     }
 

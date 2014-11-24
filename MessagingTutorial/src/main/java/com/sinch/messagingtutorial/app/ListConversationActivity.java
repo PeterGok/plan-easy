@@ -28,6 +28,7 @@ import com.parse.ParseUser;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -35,13 +36,13 @@ import java.util.List;
  */
 public class ListConversationActivity extends Activity {
 
-    public static final String ID_SEPARATOR = ";:;";
     public static final String IS_GROUP = "is_group";
     public static final String RECIPIENT_IDS = "recipient_ids";
 
     private String currentUserId;
     private ArrayAdapter<String> namesArrayAdapter;
     private ArrayList<String> names;
+    private HashMap<String, String> groupNamesToIdString;
     private ArrayList<String> ids;
     private ListView conversationListView;
     private Button logoutButton;
@@ -68,6 +69,8 @@ public class ListConversationActivity extends Activity {
                 startActivity(intent);
             }
         });
+
+        groupNamesToIdString = new HashMap<String, String>();
     }
 
     @Override
@@ -220,12 +223,44 @@ public class ListConversationActivity extends Activity {
         LocalBroadcastManager.getInstance(this).registerReceiver(receiver, new IntentFilter("com.sinch.messagingtutorial.app.ListUsersActivity"));
     }
 
-    //display clickable a list of all users
+    //display clickable a list of all conversations
     private void setConversationsList() {
         currentUserId = ParseUser.getCurrentUser().getObjectId();
         names = new ArrayList<String>();
         ids = new ArrayList<String>();
         ids.add(currentUserId);
+
+        ParseQuery<ParseObject> groupQuery = ParseQuery.getQuery("ParseMessage");
+        groupQuery.whereMatches("recipientId", MessagingActivity.ID_SEPARATOR);
+        try {
+            List<ParseObject> found = groupQuery.find();
+            for (ParseObject object : found) {
+                String recipients = (String)object.get("recipientId");
+                if (groupNamesToIdString.containsValue(recipients)) {
+                    continue;
+                }
+
+                ArrayList<String> userIds = new ArrayList<String>();
+                while (!recipients.isEmpty()) {
+                    int index = recipients.indexOf(MessagingActivity.ID_SEPARATOR);
+                    String nextId = recipients.substring(0, index);
+                    userIds.add(nextId);
+                    recipients = recipients.substring(index + MessagingActivity.ID_SEPARATOR.length());
+                }
+
+                String nameString = "";
+                for (String id : userIds) {
+                    ParseQuery<ParseUser> userQuery = ParseUser.getQuery();
+                    userQuery.whereEqualTo("objectId", id);
+                    List<ParseUser> results = userQuery.find();
+                    nameString += results.get(0).getUsername() + ", ";
+                }
+                nameString = nameString.substring(0, nameString.length() - 2);
+                groupNamesToIdString.put(nameString, recipients);
+                names.add(nameString);
+            }
+        } catch (Exception e) {
+        }
 
         ParseQuery<ParseUser> query = ParseUser.getQuery();
         query.whereNotEqualTo("objectId", currentUserId);
@@ -273,27 +308,37 @@ public class ListConversationActivity extends Activity {
     //open a conversation with one person
     public void openConversation(ArrayList<String> names, int pos) {
         ParseQuery<ParseUser> query = ParseUser.getQuery();
-        query.whereEqualTo("username", names.get(pos));
-        query.findInBackground(new FindCallback<ParseUser>() {
-            public void done(List<ParseUser> user, com.parse.ParseException e) {
-                if (e == null) {
-                    Intent intent = new Intent(getApplicationContext(), MessagingActivity.class);
-                    intent.putExtra(RECIPIENT_IDS, user.get(0).getObjectId());
-                    intent.putExtra(IS_GROUP, false);
-                    startActivity(intent);
-                } else {
-                    Toast.makeText(getApplicationContext(),
-                            "Error finding that user",
-                            Toast.LENGTH_SHORT).show();
+        String name = names.get(pos);
+        boolean isGroup = groupNamesToIdString.containsKey(name);
+
+        if (!isGroup) {
+            query.whereEqualTo("username", name);
+            query.findInBackground(new FindCallback<ParseUser>() {
+                public void done(List<ParseUser> user, com.parse.ParseException e) {
+                    if (e == null) {
+                        Intent intent = new Intent(getApplicationContext(), MessagingActivity.class);
+                        intent.putExtra(RECIPIENT_IDS, user.get(0).getObjectId());
+                        intent.putExtra(IS_GROUP, false);
+                        startActivity(intent);
+                    } else {
+                        Toast.makeText(getApplicationContext(),
+                                "Error finding that user",
+                                Toast.LENGTH_SHORT).show();
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            Intent intent = new Intent(getApplicationContext(), MessagingActivity.class);
+            intent.putExtra(RECIPIENT_IDS, groupNamesToIdString.get(name));
+            intent.putExtra(IS_GROUP, true);
+            startActivity(intent);
+        }
     }
 
     public void openGroupConversation(ArrayList<String> selectedIds) {
         String recipientString = "";
         for (String id : selectedIds) {
-            recipientString += id + ID_SEPARATOR;
+            recipientString += id + MessagingActivity.ID_SEPARATOR;
         }
         Intent intent = new Intent(getApplicationContext(), MessagingActivity.class);
         intent.putExtra(RECIPIENT_IDS, recipientString);
