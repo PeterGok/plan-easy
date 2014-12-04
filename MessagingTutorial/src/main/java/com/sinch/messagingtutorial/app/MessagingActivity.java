@@ -177,7 +177,7 @@ public class MessagingActivity extends Activity {
         @Override
         public void onMessageSent(MessageClient client, Message message, String recipientId) {
 
-            final WritableMessage writableMessage = new WritableMessage(message.getRecipientIds().get(0), message.getTextBody());
+            final WritableMessage writableMessage = new WritableMessage(message.getRecipientIds(), message.getTextBody());
 
             //only add message to parse database if it doesn't already exist there
             ParseQuery<ParseObject> query = ParseQuery.getQuery("ParseMessage");
@@ -187,9 +187,25 @@ public class MessagingActivity extends Activity {
                 public void done(List<ParseObject> messageList, com.parse.ParseException e) {
                     if (e == null) {
                         if (messageList.size() == 0) {
+                            String recipientString = "";
+                            if (isGroup) {
+                                String[] userIds = new String[writableMessage.getRecipientIds().size() + 1];
+                                userIds[0] = currentUserId;
+                                for (int index = 1; index < userIds.length; index++) {
+                                    userIds[index] = writableMessage.getRecipientIds().get(index - 1);
+                                }
+                                Arrays.sort(userIds);
+                                for (String user : userIds) {
+                                    recipientString += user + ID_SEPARATOR;
+                                }
+                            } else {
+                                recipientString = writableMessage.getRecipientIds().get(0);
+                            }
+
                             ParseObject parseMessage = new ParseObject("ParseMessage");
+
                             parseMessage.put("senderId", currentUserId);
-                            parseMessage.put("recipientId", writableMessage.getRecipientIds().get(0));
+                            parseMessage.put("recipientId", recipientString);
                             parseMessage.put("messageText", writableMessage.getTextBody());
                             parseMessage.put("sinchId", writableMessage.getMessageId());
                             parseMessage.saveInBackground();
